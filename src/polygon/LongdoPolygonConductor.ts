@@ -1,3 +1,4 @@
+import type { OverlayKind, SlottedOverlayController } from '@mapconductor/js-sdk-core';
 import {
   createPolygonEntity,
   type GeoPoint,
@@ -7,7 +8,7 @@ import {
 } from '@mapconductor/js-sdk-core';
 import { LongdoPolygonOverlayRenderer } from './LongdoPolygonOverlayRenderer';
 
-export class LongdoPolygonConductor {
+export class LongdoPolygonConductor implements SlottedOverlayController {
   readonly polygonOverlay: LongdoPolygonOverlayRenderer;
   clickListener: OnPolygonEventHandler | null = null;
 
@@ -90,4 +91,26 @@ export class LongdoPolygonConductor {
     this.operation = next.catch(() => undefined);
     return next;
   }
+  // ── SlottedOverlayController（Capable ファサードのスロット） ─────────
+  //
+  // ★ これを実装し忘れると、コントローラを登録しても composition が黙って捨てられる。
+
+  readonly kind: OverlayKind = 'polygon';
+
+  hasId(id: string): boolean {
+    return this.has({ id } as PolygonState);
+  }
+
+  async compositionAny(data: unknown[]): Promise<void> {
+    await this.composition(data as PolygonState[]);
+  }
+
+  async updateAny(state: unknown): Promise<void> {
+    await this.update(state as PolygonState);
+  }
+
+  setClickListenerAny(listener: unknown): void {
+    this.clickListener = listener as OnPolygonEventHandler | null;
+  }
+
 }

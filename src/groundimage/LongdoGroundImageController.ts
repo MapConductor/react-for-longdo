@@ -1,3 +1,4 @@
+import type { OverlayKind, SlottedOverlayController } from '@mapconductor/js-sdk-core';
 import {
   createGroundImageEntity,
   type GeoPoint,
@@ -6,7 +7,7 @@ import {
 } from '@mapconductor/js-sdk-core';
 import { LongdoGroundImageOverlayRenderer } from './LongdoGroundImageOverlayRenderer';
 
-export class LongdoGroundImageController {
+export class LongdoGroundImageController implements SlottedOverlayController {
   private readonly groundImageStates = new Map<string, GroundImageState>();
   private readonly groundImageIds = new Set<string>();
   private readonly pendingUpdates = new Map<string, GroundImageState>();
@@ -102,4 +103,26 @@ export class LongdoGroundImageController {
     this.groundImageIds.delete(id);
     this.groundImageStates.delete(id);
   }
+  // ── SlottedOverlayController（Capable ファサードのスロット） ─────────
+  //
+  // ★ これを実装し忘れると、コントローラを登録しても composition が黙って捨てられる。
+
+  readonly kind: OverlayKind = 'groundImage';
+
+  hasId(id: string): boolean {
+    return this.has({ id } as GroundImageState);
+  }
+
+  async compositionAny(data: unknown[]): Promise<void> {
+    await this.composition(data as GroundImageState[]);
+  }
+
+  async updateAny(state: unknown): Promise<void> {
+    await this.update(state as GroundImageState);
+  }
+
+  setClickListenerAny(_listener: unknown): void {
+    // このコントローラは型付きのクリックリスナーを持たない。
+  }
+
 }
