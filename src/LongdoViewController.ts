@@ -20,6 +20,7 @@ import {
   type MapUISettings,
   type GlGestureHandlers,
   applyGlMapUISettings,
+  type GeoPoint,
 } from '@mapconductor/js-sdk-core';
 import { lngLatFromEvent } from './helpers';
 import { toCameraPosition, toMapCameraPosition } from './MapCameraPosition';
@@ -152,37 +153,15 @@ export class LongdoViewController
 
     this.mapInstance.on('click', (e) => {
       const point = lngLatFromEvent(e);
-      // Check markers first (handles both regular and tiled markers), mirroring Android's onMapClick.
-      const markerEntity = this.markerController.findWithZoom(
-        point,
-        this.mapInstance.getZoom(),
-        this.markerEventController.lastPointerType,
-      );
-      if (markerEntity?.state.clickable) {
-        this.markerController.dispatchClick(markerEntity.state);
-        return;
-      }
-      // Overlays: geometric hit-tests from the click's lat/lng (NOT Longdo
-      // layer/overlay click events), mirroring the marker path above and
-      // android. Consistent across providers. Order: polyline, polygon, circle.
-      if (this.polylineController.handleMapClick(point, this.getCameraPosition())) {
-        return;
-      }
-      if (this.polygonController.handleMapClick(point)) {
-        return;
-      }
-      if (this.circleController.handleMapClick(point)) {
-        return;
-      }
+      // グラウンドイメージのドラッグ抑止で既に配送済みなら、その click は捨てる。
       if (this.skipNextGroundImageClick && this.groundImageController.hasClickableAt(point)) {
         this.skipNextGroundImageClick = false;
         return;
       }
       this.skipNextGroundImageClick = false;
-      if (this.groundImageController.dispatchClick(point)) {
-        return;
-      }
-      this.notifyMapClick(point);
+      // marker → circle → groundImage → polyline → polygon → map の一本道。
+      // 順序と先勝ちはコアの BaseMapViewController.dispatchTap が持つ。
+      this.dispatchTap(point);
     });
 
     this.mapInstance.on('contextmenu', (e) => {
@@ -405,5 +384,22 @@ export class LongdoViewController
       this.markerController.destroy();
       this.mapInstance.remove();
     });
+  }
+
+  /**
+   * マーカーのヒットテストと配送。カスケードの先頭。
+   *
+   * ズームとポインタ種別（タッチかマウスかで許容半径が変わる）が要るので
+   * コアの既定ではなくここで持つ。判定自体は core の MarkerManager。
+   */
+  protected override dispatchMarkerTap(point: GeoPoint): boolean {
+    const entity = this.markerController.findWithZoom(
+      point,
+      this.mapInstance.getZoom(),
+      this.markerEventController.lastPointerType,
+    );
+    if (!entity?.state.clickable) return false;
+    this.markerController.dispatchClick(entity.state);
+    return true;
   }
 }
