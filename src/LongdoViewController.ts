@@ -1,7 +1,7 @@
 import type * as maplibregl from 'maplibre-gl';
 import {
+  buildVisibleRegion,
   BaseMapViewController,
-  createGeoRectBounds,
   type CircleCapable,
   type GeoRectBounds,
   type GroundImageCapable,
@@ -307,18 +307,8 @@ export class LongdoViewController
     const height = canvas.clientHeight;
     if (!width || !height) return null;
 
-    const nearLeft = this.holder.fromScreenOffsetSync({ x: 0, y: height });
-    const nearRight = this.holder.fromScreenOffsetSync({ x: width, y: height });
-    const farLeft = this.holder.fromScreenOffsetSync({ x: 0, y: 0 });
-    const farRight = this.holder.fromScreenOffsetSync({ x: width, y: 0 });
-
-    const bounds = createGeoRectBounds();
-    bounds.extend(nearLeft);
-    bounds.extend(nearRight);
-    bounds.extend(farLeft);
-    bounds.extend(farRight);
-
-    return { bounds, nearLeft, nearRight, farLeft, farRight };
+    // 4 隅の逆投影と bounds の組み立てはコアの buildVisibleRegion が持つ。
+    return buildVisibleRegion(this.holder, { width, height });
   }
 
   // --- Marker ---
