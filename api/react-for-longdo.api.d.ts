@@ -1,4 +1,4 @@
-import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, OnMarkerEventHandler, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, OnPolygonEventHandler, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, MarkerAnimationOverlayHost, OnCircleEventHandler, OnPolylineEventHandler, OnGroundImageEventHandler, MapDesignTypeInterface, AttributionRule, MapViewStateInterface, MapViewState, MapViewHolder, MapViewBaseProps, AbstractZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
+import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, OnMarkerEventHandler, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, OnPolygonEventHandler, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, MarkerAnimationOverlayHost, OnCircleEventHandler, OnPolylineEventHandler, OnGroundImageEventHandler, MapDesignTypeInterface, AttributionRule, MapViewStateInterface, MapViewState, MapViewHolder, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
 import * as maplibregl from 'maplibre-gl';
 import React from 'react';
 
@@ -729,23 +729,20 @@ interface LongdoMapViewProps extends MapViewBaseProps<LongdoViewStateInterface> 
 declare function LongdoMapView(props: LongdoMapViewProps): React.JSX.Element;
 declare function LongdoMapView2D(props: LongdoMapViewProps): React.JSX.Element;
 
-declare class ZoomAltitudeConverter extends AbstractZoomAltitudeConverter {
+/**
+ * 統一ズーム（Google Maps 基準・256px タイル）⇄ 高度の変換。
+ *
+ * Longdo の web SDK は 512px タイル基準なので、統一ズームはネイティブズーム + 1。
+ * ネイティブ（android-for-longdo / ios-for-longdo）はここが 0 で、**web だけ 1**。
+ * 別のエンジンなので揃えないこと。
+ * 換算式はコアの {@link WebMercatorZoomAltitudeConverter} にある。
+ */
+declare class ZoomAltitudeConverter extends WebMercatorZoomAltitudeConverter {
     /** Empirical offset: GoogleZoom ≈ LongdoSDK.zoom + 1.0 */
     static readonly MAPLIBRE_TO_GOOGLE_ZOOM_OFFSET = 1;
+    constructor(zoom0Altitude?: number);
     static maplibreZoomToGoogleZoom(maplibreZoom: number): number;
     static googleZoomToMaplibreZoom(googleZoom: number): number;
-    private cosLatitudeFactor;
-    private cosTiltFactor;
-    zoomLevelToAltitude({ zoomLevel, latitude, tilt, }: {
-        zoomLevel: number;
-        latitude: number;
-        tilt: number;
-    }): number;
-    altitudeToZoomLevel({ altitude, latitude, tilt, }: {
-        altitude: number;
-        latitude: number;
-        tilt: number;
-    }): number;
 }
 
 export { type LongdoConfig, LongdoDesign, type LongdoMapDesignType, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewState, type LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo, useLongdoViewState };
