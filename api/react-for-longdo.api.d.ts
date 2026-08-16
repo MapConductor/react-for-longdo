@@ -1,6 +1,8 @@
-import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, SlottedOverlayController, OnPolygonEventHandler, OverlayKind, OverlayHit, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapDesignTypeInterface, AttributionRule, MapViewStateInterface, MapViewState, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
+import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, SlottedOverlayController, OnPolygonEventHandler, OverlayKind, OverlayHit, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
 import * as maplibregl from 'maplibre-gl';
 import React from 'react';
+import { LongdoViewStateInterface } from './state.js';
+export { LongdoDesign, LongdoMapDesignType, LongdoViewState, useLongdoViewState } from './state.js';
 
 interface LongdoConfig extends MapConfig {
     /** Longdo Map API3 web API key (works on the page's origin). Required for the map to load. */
@@ -551,6 +553,17 @@ declare class LongdoRasterLayerOverlayRenderer implements RasterLayerOverlayRend
     onPostProcess(): Promise<void>;
     private addLayer;
     private updateLayer;
+    /**
+     * スタイル再読込中に頼まれた削除の保留分。
+     *
+     * 追加は「ハンドルだけ返して resync が貼り直す」で済むが、削除は manager から
+     * 先に消えるため resync では拾えない。黙って捨てると、スタイル差分適用で
+     * 生き残った GL レイヤが画面に残り続ける（RasterLayer ページで選んだレリーフが
+     * GeoJSON Layer ページにも出る、という形で顕在化した）。ここで保留しておき、
+     * スタイルが編集可能になった最初の操作でまとめて消す。
+     */
+    private pendingRemovals;
+    private flushPendingRemovals;
     private removeLayer;
 }
 
@@ -631,72 +644,6 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     protected dispatchMarkerTap(point: GeoPoint): boolean;
 }
 
-interface LongdoMapDesignType extends MapDesignTypeInterface<string> {
-    /** Base layer name under `longdo.Layers` (e.g. 'NORMAL', 'GRAY', 'DARK', 'SPHERE_IMAGES'). */
-    readonly layerName: string;
-}
-/**
- * Longdo Map design (a base layer provided by the Longdo Map API3).
- *
- * `id` / `getValue()` is the stable key (used for save/restore and as the map
- * re-init trigger); the value actually loaded is the Longdo base layer
- * `longdo.Layers[layerName]`. Layer names are the standard base layers exposed
- * by `longdo.Layers` and mirror the Android `LongdoDesign` one-to-one.
- */
-declare class LongdoDesign implements LongdoMapDesignType {
-    readonly id: string;
-    readonly layerName: string;
-    readonly attributionRules: readonly AttributionRule[];
-    constructor(id: string, layerName: string, attributionRules?: readonly AttributionRule[]);
-    getValue(): string;
-    /** Standard road map. */
-    static readonly Normal: LongdoDesign;
-    /** Simplified, easy-to-read map. */
-    static readonly Easy: LongdoDesign;
-    /** Pastel-toned map. */
-    static readonly Pastel: LongdoDesign;
-    /** Pastel grayscale map. */
-    static readonly PastelGray: LongdoDesign;
-    /** High-contrast map. */
-    static readonly Hard: LongdoDesign;
-    /** Grayscale map. */
-    static readonly Gray: LongdoDesign;
-    /** Light map. */
-    static readonly Light: LongdoDesign;
-    /** Night (dark) map. */
-    static readonly Night: LongdoDesign;
-    /** Dark-themed map. */
-    static readonly Dark: LongdoDesign;
-    /** Political / administrative map. */
-    static readonly Political: LongdoDesign;
-    /** OpenStreetMap base map. */
-    static readonly Osm: LongdoDesign;
-    /** Satellite imagery. */
-    static readonly Satellite: LongdoDesign;
-    /** Satellite imagery with labels (hybrid). */
-    static readonly Hybrid: LongdoDesign;
-}
-
-interface LongdoViewStateInterface extends MapViewStateInterface<LongdoMapDesignType> {
-    /** Longdo Cloud API key used to load the style/tiles. */
-    readonly apiKey: string;
-}
-interface LongdoViewStateParams {
-    id?: string;
-    /** Longdo Cloud API key. Required for the map/tiles to load. */
-    apiKey?: string;
-    mapDesignType?: LongdoMapDesignType;
-    cameraPosition?: MapCameraPosition;
-}
-declare class LongdoViewState extends MapViewState<LongdoMapDesignType> implements LongdoViewStateInterface {
-    readonly apiKey: string;
-    private _mapDesignType;
-    constructor({ id, apiKey, mapDesignType, cameraPosition, }?: LongdoViewStateParams);
-    get mapDesignType(): LongdoMapDesignType;
-    set mapDesignType(value: LongdoMapDesignType);
-}
-declare function useLongdoViewState(params?: LongdoViewStateParams): LongdoViewStateInterface;
-
 interface LongdoMapViewProps extends MapViewBaseProps<LongdoViewStateInterface> {
     maxZoom?: number;
     minZoom?: number;
@@ -726,4 +673,4 @@ declare class ZoomAltitudeConverter extends WebMercatorZoomAltitudeConverter {
     static googleZoomToMaplibreZoom(googleZoom: number): number;
 }
 
-export { type LongdoConfig, LongdoDesign, type LongdoMapDesignType, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewState, type LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo, useLongdoViewState };
+export { type LongdoConfig, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo };
