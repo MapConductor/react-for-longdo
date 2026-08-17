@@ -24,7 +24,7 @@ key, which is restricted by package name). Pass it to the view state:
 
 ```tsx
 const state = useLongdoViewState({
-  apiKey: import.meta.env.VITE_LONGDO,
+  apiKey: LONGDO,
   mapDesignType: LongdoDesign.Normal,
   cameraPosition,
 });
@@ -40,9 +40,13 @@ import {
 } from '@mapconductor/react-for-longdo';
 import { MapCameraPosition, createGeoPoint } from '@mapconductor/js-sdk-core';
 
+// Your own key. Read it from your environment however your build tool does
+// it, and keep it out of source control.
+const LONGDO = '…';
+
 function Map() {
   const state = useLongdoViewState({
-    apiKey: import.meta.env.VITE_LONGDO,
+    apiKey: LONGDO,
     mapDesignType: LongdoDesign.Normal,
     cameraPosition: MapCameraPosition.create({
       position: createGeoPoint({ latitude: 13.7563, longitude: 100.5018 }),
