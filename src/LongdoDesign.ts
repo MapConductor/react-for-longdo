@@ -33,6 +33,8 @@ export class LongdoDesign implements LongdoMapDesignType {
   }
 
   /** Standard road map. */
+  /** No basemap: `longdo.Layers.CLEAR`, the base layer with nothing on it. */
+  static readonly None = new LongdoDesign('None', 'CLEAR');
   static readonly Normal = new LongdoDesign('Normal', 'NORMAL');
   /** Simplified, easy-to-read map. */
   static readonly Easy = new LongdoDesign('Easy', 'EASY');
