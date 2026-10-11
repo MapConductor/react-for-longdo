@@ -65,8 +65,47 @@ declare global {
 }
 
 const SCRIPT_MARKER = 'data-mapconductor-longdo';
+const SCRIPT_HOST = 'api.longdo.com';
 
 let loadPromise: Promise<LongdoNamespace> | null = null;
+
+/**
+ * Keeps Longdo's bundled deck.gl / luma.gl apart from the page's own.
+ *
+ * Longdo ships deck.gl 8 and luma.gl 8 for its 3D layers, as the page
+ * globals `deck` / `luma` (and loaders.gl's `loaders`), and both libraries
+ * refuse to initialise next to another version of themselves on that
+ * global. So on a page that also uses deck.gl 9 (react-for-deckgl) whichever
+ * loads second throws "multiple versions detected": Longdo's copy if deck.gl
+ * 9 came first, and deck.gl 9 -- taking the React tree with it -- if Longdo
+ * did.
+ *
+ * Neither side reads the global after its own initialisation, except
+ * Longdo's main script, which looks `deck.<Layer>` up while a map is set up
+ * (ten reads at creation, none while panning -- measured). So the two copies
+ * are told apart by *who is asking*: the globals become accessors that
+ * answer Longdo's scripts with Longdo's copy and everyone else with theirs.
+ * The asker is read off the stack, which is cheap at that rate.
+ */
+function isolateLongdoGlobals(): void {
+  const scope = globalThis as unknown as Record<string, unknown>;
+  const fromLongdo = () => (new Error().stack ?? '').includes(SCRIPT_HOST);
+  for (const name of ['deck', 'luma', 'loaders']) {
+    const current = Object.getOwnPropertyDescriptor(scope, name);
+    if (current && (!current.configurable || current.get)) continue; // ours already, or not ours to change
+    let longdo: unknown;
+    let foreign: unknown = current?.value;
+    Object.defineProperty(scope, name, {
+      configurable: true,
+      enumerable: true,
+      get: () => (fromLongdo() ? longdo : foreign),
+      set: (value: unknown) => {
+        if (fromLongdo()) longdo = value;
+        else foreign = value;
+      },
+    });
+  }
+}
 
 /**
  * Loads the Longdo Map API3 script (`https://api.longdo.com/map3/?key=<key>`)
@@ -77,6 +116,7 @@ export function loadLongdo(apiKey: string): Promise<LongdoNamespace> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Longdo Map can only be loaded in a browser environment'));
   }
+  isolateLongdoGlobals();
   if (window.longdo) {
     return Promise.resolve(window.longdo);
   }
@@ -105,7 +145,7 @@ export function loadLongdo(apiKey: string): Promise<LongdoNamespace> {
     }
 
     const script = document.createElement('script');
-    script.src = `https://api.longdo.com/map3/?key=${encodeURIComponent(apiKey)}`;
+    script.src = `https://${SCRIPT_HOST}/map3/?key=${encodeURIComponent(apiKey)}`;
     script.async = true;
     script.setAttribute(SCRIPT_MARKER, 'true');
     script.addEventListener('load', onReady, { once: true });

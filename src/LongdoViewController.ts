@@ -23,6 +23,7 @@ import {
   type GeoPoint,
 } from '@mapconductor/js-sdk-core';
 import { lngLatFromEvent } from './helpers';
+import type { LongdoMapDesignType } from './LongdoDesign';
 import { toCameraPosition, toMapCameraPosition } from './MapCameraPosition';
 import { LongdoMapViewHolder } from './LongdoMapViewHolder';
 import { LongdoMarkerController } from './marker/LongdoMarkerController';
@@ -48,6 +49,8 @@ export class LongdoViewController
   private initialized = false;
   private logicalTiltHint: number | null = null;
   private readonly styleReadyRef: { current: boolean };
+  /** `longdo.Layers` from the loaded SDK; null when driven headless. */
+  private readonly baseLayers: Record<string, unknown> | null;
 
   readonly holder: LongdoMapViewHolder;
   private readonly markerController: LongdoMarkerController;
@@ -71,8 +74,10 @@ export class LongdoViewController
     rasterLayerController: LongdoRasterLayerController,
     styleReadyRef: { current: boolean } = { current: true },
     logicalTiltHint: number | null = null,
+    baseLayers: Record<string, unknown> | null = null,
   ) {
     super();
+    this.baseLayers = baseLayers;
     this.mapInstance = holder.map;
     this.initialized = holder.map.loaded();
     this.holder = holder;
@@ -107,6 +112,16 @@ export class LongdoViewController
 
   getMap(): maplibregl.Map {
     return this.mapInstance;
+  }
+
+  /**
+   * Swaps the base layer in place. Longdo keeps the MapLibre style and
+   * replaces its own source underneath, so overlays stay put. Called by the
+   * view state's `mapDesignType` setter.
+   */
+  setMapDesignType(design: LongdoMapDesignType): void {
+    const layer = this.baseLayers?.[design.layerName];
+    if (layer) this.holder.longdoMap.Layers.setBase(layer);
   }
 
   /**

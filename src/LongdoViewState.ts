@@ -46,6 +46,9 @@ export class LongdoViewState
 
   override set mapDesignType(value: LongdoMapDesignType) {
     this._mapDesignType = value;
+    // Applied live by the controller; the view does not rebuild the map.
+    const controller = this.attachedMapController as { setMapDesignType?: (design: LongdoMapDesignType) => void } | null;
+    controller?.setMapDesignType?.(value);
   }
 
   // Called by LongdoView when controller is initialized

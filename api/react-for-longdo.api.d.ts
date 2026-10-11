@@ -1,8 +1,8 @@
 import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, SlottedOverlayController, OnPolygonEventHandler, OverlayKind, OverlayHit, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
 import * as maplibregl from 'maplibre-gl';
+import { LongdoMapDesignType, LongdoViewStateInterface } from './state.js';
+export { LongdoDesign, LongdoViewState, useLongdoViewState } from './state.js';
 import React from 'react';
-import { LongdoViewStateInterface } from './state.js';
-export { LongdoDesign, LongdoMapDesignType, LongdoViewState, useLongdoViewState } from './state.js';
 
 interface LongdoConfig extends MapConfig {
     /** Longdo Map API3 web API key (works on the page's origin). Required for the map to load. */
@@ -602,6 +602,8 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     private initialized;
     private logicalTiltHint;
     private readonly styleReadyRef;
+    /** `longdo.Layers` from the loaded SDK; null when driven headless. */
+    private readonly baseLayers;
     readonly holder: LongdoMapViewHolder;
     private readonly markerController;
     private readonly markerEventController;
@@ -614,8 +616,14 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     private readonly rasterLayerController;
     constructor(holder: LongdoMapViewHolder, markerController: LongdoMarkerController, markerEventController: LongdoMarkerEventController, circleController: LongdoCircleController, polylineController: LongdoPolylineController, polygonController: LongdoPolygonConductor, groundImageController: LongdoGroundImageController, rasterLayerController: LongdoRasterLayerController, styleReadyRef?: {
         current: boolean;
-    }, logicalTiltHint?: number | null);
+    }, logicalTiltHint?: number | null, baseLayers?: Record<string, unknown> | null);
     getMap(): maplibregl.Map;
+    /**
+     * Swaps the base layer in place. Longdo keeps the MapLibre style and
+     * replaces its own source underneath, so overlays stay put. Called by the
+     * view state's `mapDesignType` setter.
+     */
+    setMapDesignType(design: LongdoMapDesignType): void;
     /**
      * Longdo API3 handles panning and wheel zoom above its MapLibre renderer, so
      * those two have to go through `Ui.Mouse` — switching the renderer's own
@@ -686,4 +694,4 @@ declare class ZoomAltitudeConverter extends WebMercatorZoomAltitudeConverter {
     static googleZoomToMaplibreZoom(googleZoom: number): number;
 }
 
-export { type LongdoConfig, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo };
+export { type LongdoConfig, LongdoMapDesignType, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo };
