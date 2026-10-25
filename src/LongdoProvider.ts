@@ -152,6 +152,7 @@ export class LongdoProvider extends MapProvider {
       rasterLayerController,
       styleReadyRef,
       config.initCameraPosition?.tilt ?? null,
+      longdo.Layers,
     );
     return this.controller;
   }
