@@ -694,4 +694,5 @@ declare class ZoomAltitudeConverter extends WebMercatorZoomAltitudeConverter {
     static googleZoomToMaplibreZoom(googleZoom: number): number;
 }
 
-export { type LongdoConfig, LongdoMapDesignType, LongdoMapView, LongdoMapView2D, type LongdoMapViewProps, LongdoProvider, LongdoViewController, LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo };
+export { LongdoMapDesignType, LongdoMapView, LongdoMapView2D, LongdoProvider, LongdoViewController, LongdoViewStateInterface, ZoomAltitudeConverter, loadLongdo };
+export type { LongdoConfig, LongdoMapViewProps };
