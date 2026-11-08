@@ -1,6 +1,6 @@
 import type { GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 import type { PolylineEntity } from '@mapconductor/js-sdk-core';
-import { bringMarkerLayersToFront, setSourceFeatures, type FeatureCollection, type LineFeature } from '../helpers';
+import { bringMarkerLayersToFront, setSourceFeatures, type FeatureCollection, type LineFeature, overlayLayerBeforeId, overlayStackKeyOf } from '../helpers';
 import { LongdoMapViewHolder } from '../LongdoMapViewHolder';
 
 export type LongdoActualPolyline = LineFeature[];
@@ -79,7 +79,7 @@ export class LongdoPolylineLayer {
               'line-width': ['get', LongdoPolylineLayer.Prop.STROKE_WIDTH],
             },
           } as LayerSpecification,
-          map.getLayer('mc-marker-layer') ? 'mc-marker-layer' : undefined,
+          overlayLayerBeforeId(map, overlayStackKeyOf(map, this.layerId) ?? { kind: 'polyline' }),
         );
       }
       bringMarkerLayersToFront(map);
