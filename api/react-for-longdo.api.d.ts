@@ -1,4 +1,4 @@
-import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, PolygonController, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, SlottedOverlayController, OverlayKind, OverlayHit, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
+import { MapConfig, GeoRectBounds, MarkerTilingOptions, PolylineTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, PolygonController, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, SlottedOverlayController, OverlayKind, OverlayHit, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
 import * as maplibregl from 'maplibre-gl';
 import { LongdoMapDesignType, LongdoViewStateInterface } from './state.js';
 export { LongdoDesign, LongdoViewState, useLongdoViewState } from './state.js';
@@ -16,6 +16,11 @@ interface LongdoConfig extends MapConfig {
     /** Longdo map language (e.g. 'en', 'th'). */
     language?: string;
     markerTilingOptions?: MarkerTilingOptions;
+    /**
+     * When to draw polylines as raster tiles; {@link PolylineTilingOptions.Default} if omitted.
+     * The controller's `setPolylineTilingOptions` replaces it later.
+     */
+    polylineTilingOptions?: PolylineTilingOptions;
 }
 /**
  * Longdo provider implementation.
@@ -514,6 +519,7 @@ declare class LongdoGroundImageController implements SlottedOverlayController {
     resync(): void;
     clear(): void;
     private cancelPendingUpdates;
+    /** Resolves to true when it created the image (it was not on the map). */
     private upsert;
     private removeById;
     readonly kind: OverlayKind;
@@ -555,8 +561,9 @@ declare class LongdoRasterLayerOverlayRenderer implements RasterLayerOverlayRend
     private stackKey;
     /**
      * Under every other overlay (the raster band is the lowest), and under the basemap's labels,
-     * whichever comes first. Marker tiles and polygon tiles are drawn as a raster but belong with
-     * the markers and the polygons, and are not imagery: they do not go under the labels either
+     * whichever comes first. Marker, polygon and polyline tiles are drawn as a raster but belong
+     * with the markers, the polygons and the polylines, and are not imagery: they do not go under
+     * the labels either
      * (under the first label the polygon tiles can end up beneath the style's opaque fills).
      */
     private beforeId;
@@ -681,6 +688,12 @@ interface LongdoMapViewProps extends MapViewBaseProps<LongdoViewStateInterface> 
     onError?: (error: Error) => void;
     children?: React.ReactNode;
     markerTilingOptions?: MarkerTilingOptions;
+    /**
+     * When to draw polylines as raster tiles ({@link PolylineTilingOptions.Default} if omitted).
+     * Read when the map is created; a later value applies from the next time the polylines are
+     * handed to the map.
+     */
+    polylineTilingOptions?: PolylineTilingOptions;
 }
 declare function LongdoMapView(props: LongdoMapViewProps): React.JSX.Element;
 declare function LongdoMapView2D(props: LongdoMapViewProps): React.JSX.Element;
