@@ -31,7 +31,7 @@ import { LongdoMarkerController } from './marker/LongdoMarkerController';
 import { LongdoMarkerEventController } from './marker/LongdoMarkerEventController';
 import { LongdoCircleController } from './circle/LongdoCircleController';
 import { LongdoPolylineController } from './polyline/LongdoPolylineController';
-import { LongdoPolygonConductor } from './polygon/LongdoPolygonConductor';
+import { LongdoPolygonController } from './polygon/LongdoPolygonController';
 import { LongdoGroundImageController } from './groundimage/LongdoGroundImageController';
 import { LongdoRasterLayerController } from './raster/LongdoRasterLayerController';
 
@@ -60,7 +60,7 @@ export class LongdoViewController
   private skipNextGroundImageClick = false;
   private readonly circleController: LongdoCircleController;
   private readonly polylineController: LongdoPolylineController;
-  private readonly polygonController: LongdoPolygonConductor;
+  private readonly polygonController: LongdoPolygonController;
   private readonly groundImageController: LongdoGroundImageController;
   private readonly rasterLayerController: LongdoRasterLayerController;
 
@@ -70,7 +70,7 @@ export class LongdoViewController
     markerEventController: LongdoMarkerEventController,
     circleController: LongdoCircleController,
     polylineController: LongdoPolylineController,
-    polygonController: LongdoPolygonConductor,
+    polygonController: LongdoPolygonController,
     groundImageController: LongdoGroundImageController,
     rasterLayerController: LongdoRasterLayerController,
     styleReadyRef: { current: boolean } = { current: true },
@@ -383,12 +383,14 @@ export class LongdoViewController
   // --- Lifecycle ---
 
   async clearOverlays(): Promise<void> {
-    await this.markerController.clear();
-    await this.circleController.clear();
-    await this.polylineController.clear();
-    await this.polygonController.clear();
-    this.groundImageController.clear();
-    await this.rasterLayerController.clear();
+    await this.clearOverlayControllers([
+      this.markerController,
+      this.circleController,
+      this.polylineController,
+      this.polygonController,
+      this.groundImageController,
+      this.rasterLayerController,
+    ]);
   }
 
   destroy(): void {

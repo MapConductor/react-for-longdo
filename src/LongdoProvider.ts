@@ -24,7 +24,7 @@ import { LongdoCircleOverlayRenderer } from './circle/LongdoCircleOverlayRendere
 import { LongdoPolylineController } from './polyline/LongdoPolylineController';
 import { LongdoPolylineLayer, type LongdoActualPolyline } from './polyline/LongdoPolylineLayer';
 import { LongdoPolylineOverlayRenderer } from './polyline/LongdoPolylineOverlayRenderer';
-import { LongdoPolygonConductor } from './polygon/LongdoPolygonConductor';
+import { LongdoPolygonController } from './polygon/LongdoPolygonController';
 import { LongdoPolygonLayer, type LongdoActualPolygon } from './polygon/LongdoPolygonLayer';
 import { LongdoPolygonOverlayRenderer } from './polygon/LongdoPolygonOverlayRenderer';
 import { LongdoGroundImageController } from './groundimage/LongdoGroundImageController';
@@ -233,11 +233,11 @@ function getPolylineController(
 function getPolygonController(
   holder: LongdoMapViewHolder,
   canEditStyle: () => boolean,
-): LongdoPolygonConductor {
+): LongdoPolygonController {
   const polygonManager = new PolygonManager<LongdoActualPolygon>();
   const layer = new LongdoPolygonLayer({ holder, canEditStyle });
   const renderer = new LongdoPolygonOverlayRenderer({ layer, polygonManager, holder });
-  return new LongdoPolygonConductor(renderer);
+  return new LongdoPolygonController(renderer);
 }
 
 function getGroundImageController(
