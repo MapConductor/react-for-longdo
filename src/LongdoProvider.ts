@@ -2,7 +2,7 @@ import {
   CircleManager,
   MapProvider,
   MarkerManager,
-  MarkerTilingOptions,
+  MarkerTilingOptions, PolylineTiler, PolylineTilingOptions,
   PolygonManager,
   PolylineManager,
   type GeoRectBounds,
@@ -44,6 +44,11 @@ export interface LongdoConfig extends MapConfig {
   /** Longdo map language (e.g. 'en', 'th'). */
   language?: string;
   markerTilingOptions?: MarkerTilingOptions;
+  /**
+   * When to draw polylines as raster tiles; {@link PolylineTilingOptions.Default} if omitted.
+   * The controller's `setPolylineTilingOptions` replaces it later.
+   */
+  polylineTilingOptions?: PolylineTilingOptions;
 }
 
 // Sentinel used to silently cancel initialization when destroy() is called before load.
@@ -137,6 +142,9 @@ export class LongdoProvider extends MapProvider {
     const markerEventController = new LongdoMarkerEventController(markerController);
     const circleController = getCircleController(holder, canEditStyle);
     const polylineController = getPolylineController(holder, canEditStyle);
+    // Many polylines are drawn as tiles by the tile service worker and shown as one raster
+    // layer (the view controller mounts it); taps still resolve against the original paths.
+    polylineController.tiler = new PolylineTiler(config.polylineTilingOptions ?? PolylineTilingOptions.Default);
     const polygonController = getPolygonController(holder, canEditStyle);
     const groundImageController = getGroundImageController(holder, canEditStyle);
     const rasterLayerController = getRasterLayerController(holder, canEditStyle);
