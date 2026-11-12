@@ -25,7 +25,7 @@ import {
 } from '@mapconductor/js-sdk-core';
 import { lngLatFromEvent } from './helpers';
 import type { LongdoMapDesignType } from './LongdoDesign';
-import { toCameraPosition, toMapCameraPosition } from './MapCameraPosition';
+import { toCameraPosition, toMapCameraPosition, readVerticalFov } from './MapCameraPosition';
 import { LongdoMapViewHolder } from './LongdoMapViewHolder';
 import { LongdoMarkerController } from './marker/LongdoMarkerController';
 import { LongdoMarkerEventController } from './marker/LongdoMarkerEventController';
@@ -278,6 +278,7 @@ export class LongdoViewController
         zoom: cam.zoom,
         bearing: cam.bearing,
         pitch: cam.tilt,
+        ...(cam.padding ? { padding: cam.padding } : {}),
       });
     });
   }
@@ -292,6 +293,7 @@ export class LongdoViewController
         zoom: cam.zoom,
         bearing: cam.bearing,
         pitch: cam.tilt,
+        ...(cam.padding ? { padding: cam.padding } : {}),
         duration: durationMillis || 500,
       });
     });
@@ -323,6 +325,8 @@ export class LongdoViewController
       zoom: this.mapInstance.getZoom(),
       bearing: this.mapInstance.getBearing(),
       tilt: this.mapInstance.getPitch(),
+      padding: this.mapInstance.getPadding(),
+      fov: readVerticalFov(this.mapInstance),
       logicalTiltHint: this.logicalTiltHint,
     });
     if (!camera) return camera;
