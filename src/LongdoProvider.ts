@@ -124,8 +124,7 @@ export class LongdoProvider extends MapProvider {
     this.longdoMap = longdoMap;
 
     const map = await waitForRenderer(longdoMap, longdo);
-    // MapOptions にはパディングの口が無いので、作った直後に入れる。
-    if (initialCamera?.padding) map.setPadding(initialCamera.padding);
+    // paddings are applied by the controller (camera-centre shift) on its first move, not as engine padding.
     if (token !== this.initToken) {
       try {
         map.remove();
