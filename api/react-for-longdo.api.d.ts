@@ -620,6 +620,14 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     private readonly mapInstance;
     private initialized;
     private logicalTiltHint;
+    /**
+     * The paddings the app asked for. The engine's own `padding` is left at zero:
+     * it widens the frustum toward the top, so under tilt a large top padding
+     * reaches past the horizon and the engine loads tiles out to it (the map
+     * stalls). Shifting the camera centre instead puts the target at the padded
+     * centre with the frustum the engine would draw without padding.
+     */
+    private cameraPaddings;
     private readonly styleReadyRef;
     /** `longdo.Layers` from the loaded SDK; null when driven headless. */
     private readonly baseLayers;
@@ -655,6 +663,9 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     animateCamera(position: MapCameraPosition, durationMillis: number): Promise<boolean>;
     fitBounds(bounds: GeoRectBounds, padding: number): Promise<boolean>;
     getCameraPosition(): MapCameraPosition | null;
+    /** Moves the camera centre so the target lands at the padded-area centre; the engine's padding stays zero. */
+    private withPaddedCenter;
+    private canvasSize;
     /**
      * Projects the four screen corners of the map viewport back to geo
      * coordinates via `fromScreenOffsetSync` and extends a bounds from them,
