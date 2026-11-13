@@ -1,4 +1,4 @@
-import { MapConfig, GeoRectBounds, MarkerTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, SlottedOverlayController, OnPolygonEventHandler, OverlayKind, OverlayHit, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
+import { MapConfig, GeoRectBounds, MarkerTilingOptions, PolylineTilingOptions, CircleTilingOptions, MapProvider, MapViewControllerInterface, MapViewHolderBase, GeoPointInterface, Offset, GeoPoint, MarkerEntity, AbstractMarkerOverlayRenderer, MarkerManager, AddParams, ChangeParams, MarkerState, BitmapIcon, AbstractMarkerController, RasterLayerState, DefaultMarkerEventController, CircleEntity, AbstractCircleOverlayRenderer, CircleManagerInterface, CircleState, CircleController, PolylineEntity, AbstractPolylineOverlayRenderer, PolylineManagerInterface, PolylineState, PolylineController, MapCameraPosition, PolygonEntity, AbstractPolygonOverlayRenderer, PolygonManagerInterface, PolygonState, PolygonController, AbstractGroundImageOverlayRenderer, GroundImageState, GroundImageEntity, SlottedOverlayController, OverlayKind, OverlayHit, RasterLayerOverlayRenderer, RasterLayerAddParams, RasterLayerChangeParams, RasterLayerEntity, RasterLayerController, RasterHeaderSupport, BaseMapViewController, MarkerCapable, CircleCapable, PolylineCapable, PolygonCapable, GroundImageCapable, RasterLayerCapable, MapUISettings, OnMapInitializedHandler, OnMarkerEventHandler, MarkerAnimationOverlayHost, OnGroundImageEventHandler, MapViewBaseProps, WebMercatorZoomAltitudeConverter } from '@mapconductor/js-sdk-core';
 import * as maplibregl from 'maplibre-gl';
 import { LongdoMapDesignType, LongdoViewStateInterface } from './state.js';
 export { LongdoDesign, LongdoViewState, useLongdoViewState } from './state.js';
@@ -16,6 +16,16 @@ interface LongdoConfig extends MapConfig {
     /** Longdo map language (e.g. 'en', 'th'). */
     language?: string;
     markerTilingOptions?: MarkerTilingOptions;
+    /**
+     * When to draw polylines as raster tiles; {@link PolylineTilingOptions.Default} if omitted.
+     * The controller's `setPolylineTilingOptions` replaces it later.
+     */
+    polylineTilingOptions?: PolylineTilingOptions;
+    /**
+     * When to draw circles as raster tiles; {@link CircleTilingOptions.Default} if omitted.
+     * The controller's `setCircleTilingOptions` replaces it later.
+     */
+    circleTilingOptions?: CircleTilingOptions;
 }
 /**
  * Longdo provider implementation.
@@ -332,7 +342,6 @@ declare class LongdoCircleController extends CircleController<LongdoActualCircle
     constructor(renderer: LongdoCircleOverlayRenderer);
     update(state: CircleState): Promise<void>;
     resync(): Promise<void>;
-    clear(): Promise<void>;
     /**
      * Hit-test a map click (its lat/lng) against the circles geometrically (inside
      * the fill radius) and dispatch the click on the matching circle. Does NOT use
@@ -387,7 +396,6 @@ declare class LongdoPolylineController extends PolylineController<LongdoActualPo
     readonly renderer: LongdoPolylineOverlayRenderer;
     constructor(renderer: LongdoPolylineOverlayRenderer);
     resync(): Promise<void>;
-    clear(): Promise<void>;
     /**
      * Hit-test a map click (its lat/lng) against the polylines geometrically and,
      * if the click lands within the tap tolerance of a line, dispatch the click on
@@ -449,42 +457,34 @@ declare class LongdoPolygonOverlayRenderer extends AbstractPolygonOverlayRendere
     onPostProcess(): Promise<void>;
 }
 
-declare class LongdoPolygonConductor implements SlottedOverlayController {
-    readonly polygonOverlay: LongdoPolygonOverlayRenderer;
-    clickListener: OnPolygonEventHandler | null;
-    private operation;
-    constructor(polygonOverlay: LongdoPolygonOverlayRenderer);
-    composition(data: PolygonState[]): Promise<void>;
-    update(state: PolygonState): Promise<void>;
-    has(state: PolygonState): boolean;
+/**
+ * core の {@link PolygonController} をそのまま使う。差分管理（fingerprint による
+ * 追加・変更・削除の振り分け）、直列化、`has`、クリックカスケード（`resolveTap`）は
+ * すべて core 側の実装で、ここには持たない。
+ *
+ * 塗りと輪郭は {@link LongdoPolygonOverlayRenderer} が 1 つのレンダラーで描く
+ * （fill レイヤーは線幅を持てないので、輪郭は line レイヤーに別ソースで描く）。
+ * レンダラーは `onPostProcess()` でマネージャ全体から GeoJSON ソースを書き直す方式で、
+ * `removePolygon()` は何もしない。
+ */
+declare class LongdoPolygonController extends PolygonController<LongdoActualPolygon> {
+    readonly renderer: LongdoPolygonOverlayRenderer;
+    constructor(renderer: LongdoPolygonOverlayRenderer);
+    /** スタイルの再読み込みで消えたソース／レイヤーを、マネージャの内容から描き直す。 */
     resync(): Promise<void>;
+    /**
+     * core の `clear()` は `onRemove` → マネージャを空にする、までで描き直さない。
+     * このレンダラーは `onPostProcess()` でしか地図に反映しないので、ここで描き直す
+     * （同じ方式のポリラインコントローラと同じ）。
+     */
     clear(): Promise<void>;
-    private redraw;
-    /**
-     * Hit-test a map click (its lat/lng) against the polygons geometrically
-     * (point-in-polygon, honouring holes and zIndex) and dispatch the click on the
-     * top-most polygon that contains the point. Does NOT use a Longdo
-     * layer/overlay click event — detection is driven by the map click position,
-     * matching the marker/polyline paths and android. Returns true if hit.
-     */
-    handleMapClick(clicked: GeoPoint): boolean;
-    private enqueue;
-    readonly kind: OverlayKind;
-    hasId(id: string): boolean;
-    compositionAny(data: unknown[]): Promise<void>;
-    updateAny(state: unknown): Promise<void>;
-    setClickListenerAny(listener: unknown): void;
-    /**
-     * タップの当たり判定と配送。カスケードの 1 段（{@link OverlayHitResolver}）。
-     * 判定は既存の handleMapClick と同じ（point-in-polygon、穴と zIndex を考慮）。
-     */
-    resolveTap(position: GeoPointInterface): OverlayHit | null;
 }
 
 declare class LongdoGroundImageOverlayRenderer extends AbstractGroundImageOverlayRenderer<LongdoMapViewHolder, string> {
     private readonly canEditStyle;
     /** Last values applied to the map style, keyed by state id. */
     private readonly applied;
+    private readonly pendingRemovals;
     constructor({ holder, canEditStyle, }: {
         holder: LongdoMapViewHolder;
         canEditStyle: () => boolean;
@@ -500,6 +500,13 @@ declare class LongdoGroundImageOverlayRenderer extends AbstractGroundImageOverla
     /** Sync an already-created image source+layer to the current state (diffed). */
     private applyToExisting;
     removeGroundImage(entity: GroundImageEntity<string>): Promise<void>;
+    /**
+     * Under the polygons, circles, polylines and markers, above the rasters, whatever order the
+     * overlays were added in. Ground images have no zIndex; among themselves they keep the order
+     * they were handed over in.
+     */
+    private groundImageBeforeId;
+    private removeFromStyle;
 }
 
 declare class LongdoGroundImageController implements SlottedOverlayController {
@@ -517,6 +524,7 @@ declare class LongdoGroundImageController implements SlottedOverlayController {
     resync(): void;
     clear(): void;
     private cancelPendingUpdates;
+    /** Resolves to true when it created the image (it was not on the map). */
     private upsert;
     private removeById;
     readonly kind: OverlayKind;
@@ -554,6 +562,16 @@ declare class LongdoRasterLayerOverlayRenderer implements RasterLayerOverlayRend
     onCameraChanged(_mapCameraPosition: MapCameraPosition): Promise<void>;
     onPostProcess(): Promise<void>;
     private addLayer;
+    /** This raster's place in the overlay stack: the lowest band, ordered by zIndex. */
+    private stackKey;
+    /**
+     * Under every other overlay (the raster band is the lowest), and under the basemap's labels,
+     * whichever comes first. Marker, polygon, circle and polyline tiles are drawn as a raster but
+     * belong with the markers, the polygons, the circles and the polylines, and are not imagery: they
+     * do not go under the labels either
+     * (under the first label the polygon tiles can end up beneath the style's opaque fills).
+     */
+    private beforeId;
     /**
      * The style's first label layer, so a raster overlay can go under it.
      *
@@ -602,6 +620,14 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     private readonly mapInstance;
     private initialized;
     private logicalTiltHint;
+    /**
+     * The paddings the app asked for. The engine's own `padding` is left at zero:
+     * it widens the frustum toward the top, so under tilt a large top padding
+     * reaches past the horizon and the engine loads tiles out to it (the map
+     * stalls). Shifting the camera centre instead puts the target at the padded
+     * centre with the frustum the engine would draw without padding.
+     */
+    private cameraPaddings;
     private readonly styleReadyRef;
     /** `longdo.Layers` from the loaded SDK; null when driven headless. */
     private readonly baseLayers;
@@ -615,7 +641,7 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     private readonly polygonController;
     private readonly groundImageController;
     private readonly rasterLayerController;
-    constructor(holder: LongdoMapViewHolder, markerController: LongdoMarkerController, markerEventController: LongdoMarkerEventController, circleController: LongdoCircleController, polylineController: LongdoPolylineController, polygonController: LongdoPolygonConductor, groundImageController: LongdoGroundImageController, rasterLayerController: LongdoRasterLayerController, styleReadyRef?: {
+    constructor(holder: LongdoMapViewHolder, markerController: LongdoMarkerController, markerEventController: LongdoMarkerEventController, circleController: LongdoCircleController, polylineController: LongdoPolylineController, polygonController: LongdoPolygonController, groundImageController: LongdoGroundImageController, rasterLayerController: LongdoRasterLayerController, styleReadyRef?: {
         current: boolean;
     }, logicalTiltHint?: number | null, baseLayers?: Record<string, unknown> | null);
     getMap(): maplibregl.Map;
@@ -637,6 +663,9 @@ declare class LongdoViewController extends BaseMapViewController implements MapV
     animateCamera(position: MapCameraPosition, durationMillis: number): Promise<boolean>;
     fitBounds(bounds: GeoRectBounds, padding: number): Promise<boolean>;
     getCameraPosition(): MapCameraPosition | null;
+    /** Moves the camera centre so the target lands at the padded-area centre; the engine's padding stays zero. */
+    private withPaddedCenter;
+    private canvasSize;
     /**
      * Projects the four screen corners of the map viewport back to geo
      * coordinates via `fromScreenOffsetSync` and extends a bounds from them,
@@ -675,6 +704,18 @@ interface LongdoMapViewProps extends MapViewBaseProps<LongdoViewStateInterface> 
     onError?: (error: Error) => void;
     children?: React.ReactNode;
     markerTilingOptions?: MarkerTilingOptions;
+    /**
+     * When to draw polylines as raster tiles ({@link PolylineTilingOptions.Default} if omitted).
+     * Read when the map is created; a later value applies from the next time the polylines are
+     * handed to the map.
+     */
+    polylineTilingOptions?: PolylineTilingOptions;
+    /**
+     * When to draw circles as raster tiles ({@link CircleTilingOptions.Default} if omitted).
+     * Read when the map is created; a later value applies from the next time the circles are
+     * handed to the map.
+     */
+    circleTilingOptions?: CircleTilingOptions;
 }
 declare function LongdoMapView(props: LongdoMapViewProps): React.JSX.Element;
 declare function LongdoMapView2D(props: LongdoMapViewProps): React.JSX.Element;
